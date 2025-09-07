@@ -44,37 +44,7 @@ public class AuthCommand : Command<GlobalSettings>
                 new TextPrompt<string>("Enter your Tapo [blue]password[/]:")
                     .Secret());
 
-            // Test credentials
-            AnsiConsole.WriteLine();
-            bool testCredentials = AnsiConsole.Confirm("Test credentials with a device?", defaultValue: false);
-            
-            if (testCredentials)
-            {
-                var testIp = AnsiConsole.Ask<string>("Enter device IP to test:");
-                
-                await AnsiConsole.Status()
-                    .Spinner(Spinner.Known.Dots)
-                    .StartAsync("Testing credentials...", async ctx =>
-                    {
-                        try
-                        {
-                            // Test credentials directly without loading from disk
-                            var client = new TapoCSharp.ApiClient(username, password);
-                            var device = await client.P100Async(testIp);
-                            var deviceInfo = await device.GetDeviceInfoAsync();
-                            
-                            var model = deviceInfo?["model"]?.ToString();
-                            AnsiConsole.MarkupLine($"[green]✓[/] Successfully connected to {model ?? "device"}");
-                        }
-                        catch (Exception ex)
-                        {
-                            AnsiConsole.MarkupLine($"[red]✗[/] Credential test failed: {ex.Message}");
-                            throw new InvalidOperationException("Credential test failed");
-                        }
-                    });
-            }
-
-            // Save credentials
+            // Save credentials immediately
             var authConfig = new AuthConfig
             {
                 Username = username,
@@ -84,8 +54,105 @@ public class AuthCommand : Command<GlobalSettings>
             await configService.SaveAuthConfigAsync(authConfig);
 
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[green]✓[/] Authentication configuration saved successfully!");
-            AnsiConsole.MarkupLine("Configuration stored in [dim]~/.tapo/auth.json[/]");
+            AnsiConsole.MarkupLine("[green]✓[/] Authentication credentials saved!");
+
+            // Ask for an IP to test and scan network
+            AnsiConsole.WriteLine();
+            var knownIp = AnsiConsole.Ask<string>("Enter the IP address of [blue]any Tapo device[/] on your network:");
+            
+            // Test the known device first
+            await AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .StartAsync("Testing credentials...", async ctx =>
+                {
+                    try
+                    {
+                        var (success, model, error) = await deviceService.TestDeviceConnectionAsync(knownIp);
+                        if (!success)
+                        {
+                            throw new InvalidOperationException($"Failed to connect to device: {error}");
+                        }
+                        
+                        AnsiConsole.MarkupLine($"[green]✓[/] Successfully connected to {model} at {knownIp}");
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[red]✗[/] Credential test failed: {ex.Message}");
+                        throw;
+                    }
+                });
+
+            // Scan network for other devices
+            AnsiConsole.WriteLine();
+            bool scanNetwork = AnsiConsole.Confirm("Scan network for other Tapo devices?", defaultValue: true);
+            
+            if (scanNetwork)
+            {
+                var networkScanService = new NetworkScanService(deviceService);
+                var foundDevices = new List<(string ip, string model)>();
+                
+                await AnsiConsole.Progress()
+                    .StartAsync(async ctx =>
+                    {
+                        var task = ctx.AddTask("Scanning network...", maxValue: 254);
+                        var progress = new Progress<string>(msg =>
+                        {
+                            task.Description = msg;
+                            task.Increment(1);
+                        });
+                        
+                        foundDevices = await networkScanService.ScanSubnetAsync(knownIp, progress);
+                        task.Value = task.MaxValue;
+                    });
+
+                AnsiConsole.WriteLine();
+                if (foundDevices.Any())
+                {
+                    AnsiConsole.MarkupLine($"[green]Found {foundDevices.Count} Tapo device(s):[/]");
+                    
+                    var table = new Table();
+                    table.AddColumn("IP Address");
+                    table.AddColumn("Model");
+                    
+                    foreach (var device in foundDevices)
+                    {
+                        table.AddRow(device.ip, device.model);
+                    }
+                    
+                    AnsiConsole.Write(table);
+                    
+                    bool addDevices = AnsiConsole.Confirm("Add devices to configuration?", defaultValue: true);
+                    if (addDevices)
+                    {
+                        AnsiConsole.WriteLine();
+                        AnsiConsole.MarkupLine("[blue]Enter names for each device:[/]");
+                        
+                        foreach (var device in foundDevices)
+                        {
+                            var suggestedName = $"{device.model.Replace("Tapo ", "")} {device.ip.Split('.').Last()}";
+                            var deviceName = AnsiConsole.Ask<string>($"Name for {device.model} at [green]{device.ip}[/]:", suggestedName);
+                            
+                            var deviceConfig = new DeviceConfig
+                            {
+                                Name = deviceName,
+                                IpAddress = device.ip,
+                                Model = device.model
+                            };
+                            
+                            await configService.AddDeviceAsync(deviceConfig);
+                        }
+                        
+                        AnsiConsole.MarkupLine($"[green]✓[/] Added {foundDevices.Count} device(s) to your configuration!");
+                    }
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[yellow]No additional Tapo devices found on the network.[/]");
+                }
+            }
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("Configuration stored in [dim]~/.tapo/[/]");
 
             return 0;
         }
