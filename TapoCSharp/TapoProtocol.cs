@@ -37,7 +37,6 @@ internal class TapoProtocol
     private async Task<IProtocolHandler> DiscoverProtocolAsync(string url)
     {
         // Force KLAP since we know from Rust debug that it works
-        Console.WriteLine("Using KLAP protocol (forced)");
         return new KlapProtocolHandler(_httpClient);
         
         /*
@@ -62,12 +61,10 @@ internal class TapoProtocol
             // If error code is 1003, Passthrough is NOT supported, use KLAP
             if (errorCode == 1003)
             {
-                Console.WriteLine("Using KLAP protocol (component_nego returned 1003)");
                 return new KlapProtocolHandler(_httpClient);
             }
             else
             {
-                Console.WriteLine($"Using Passthrough protocol (component_nego returned {errorCode})");
                 return new PassthroughProtocolHandler(_httpClient);
             }
         }
@@ -76,7 +73,6 @@ internal class TapoProtocol
             // Fall through to KLAP
         }
         
-        Console.WriteLine("Using KLAP protocol");
         return new KlapProtocolHandler(_httpClient);
         */
     }

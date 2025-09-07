@@ -1,3 +1,4 @@
+using System.Text;
 using TapoCSharp;
 using TapoCSharp.Cli.Models;
 
@@ -76,5 +77,24 @@ public class DeviceService
     {
         var deviceList = await _configService.LoadDevicesAsync();
         return deviceList.Devices.ToArray();
+    }
+
+    /// <summary>
+    /// Decodes the Base64 encoded nickname from device info
+    /// </summary>
+    public static string DecodeNickname(string? base64Nickname)
+    {
+        if (string.IsNullOrEmpty(base64Nickname))
+            return "Unnamed Device";
+
+        try
+        {
+            var bytes = Convert.FromBase64String(base64Nickname);
+            return Encoding.UTF8.GetString(bytes);
+        }
+        catch
+        {
+            return base64Nickname; // Return as-is if not valid Base64
+        }
     }
 }

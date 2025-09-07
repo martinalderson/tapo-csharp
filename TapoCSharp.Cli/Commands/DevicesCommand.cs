@@ -95,11 +95,40 @@ public class AddDeviceCommand : AsyncCommand<AddDeviceSettings>
 
             AnsiConsole.MarkupLine($"[green]✓[/] Successfully connected to {model ?? "device"}");
 
-            // Get device name
+            // Get device name - try to use the device's actual nickname first
             var deviceName = settings.Name;
             if (string.IsNullOrEmpty(deviceName))
             {
-                deviceName = AnsiConsole.Ask<string>("Enter a name for this device:");
+                // Try to get the device's actual nickname
+                try
+                {
+                    var auth = await configService.LoadAuthConfigAsync();
+                    if (auth != null)
+                    {
+                        var client = new TapoCSharp.ApiClient(auth.Username, auth.Password);
+                        var deviceHandler = await client.P100Async(settings.IpAddress);
+                        var deviceInfo = await deviceHandler.GetDeviceInfoAsync();
+                        
+                        var encodedNickname = deviceInfo?["nickname"]?.ToString();
+                        var decodedName = DeviceService.DecodeNickname(encodedNickname);
+                        
+                        if (decodedName != "Unnamed Device")
+                        {
+                            deviceName = decodedName;
+                            AnsiConsole.MarkupLine($"[cyan]Using device's configured name: '{deviceName}'[/]");
+                        }
+                    }
+                }
+                catch
+                {
+                    // If we can't get the nickname, continue to ask user
+                }
+                
+                // If we still don't have a name, ask the user
+                if (string.IsNullOrEmpty(deviceName) || deviceName == "Unnamed Device")
+                {
+                    deviceName = AnsiConsole.Ask<string>("Enter a name for this device:");
+                }
             }
 
             // Check if device already exists
