@@ -46,7 +46,7 @@ tapo devices rm "Living Room Lamp"
 - 🔧 **Device Management**: Add, remove, and list your devices
 - ⚡ **Instant Control**: Turn devices on/off with simple commands
 - 📊 **Device Status**: View detailed device information and status
-- 🔐 **Secure Storage**: Credentials stored securely in `~/.tapo/`
+- 🔐 **Local Storage**: Credentials stored locally in `~/.tapo/`
 
 ## 📚 Library Usage
 
