@@ -4,26 +4,18 @@ A C# library and CLI tool for controlling TP-Link Tapo smart devices, specifical
 
 ## 🚀 Quick Start
 
-### CLI Tool (Recommended)
-
-The easiest way to use TapoCSharp is with the CLI tool. Download the pre-built binary for your platform:
-
-- **Linux x64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-linux-x64)
-- **Linux ARM64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-linux-arm64)
-- **macOS x64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-osx-x64)
-- **macOS ARM64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-osx-arm64)
-- **Windows x64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-win-x64.exe)
-
-#### Installation
+### Build and Install CLI
 
 ```bash
-# Linux/macOS - Copy to a directory in your PATH
-sudo cp tapo /usr/local/bin/
-chmod +x /usr/local/bin/tapo
+# Clone and build
+git clone https://github.com/martinalderson/tapo-csharp.git
+cd tapo-csharp
 
-# Or for user installation:
-cp tapo ~/.local/bin/
-chmod +x ~/.local/bin/tapo
+# Build all platforms
+dotnet msbuild TapoCSharp.Cli/TapoCSharp.Cli.csproj -t:PublishAll -p:Configuration=Release
+
+# Install on Linux (builds and installs to ~/.local/bin/tapo)
+dotnet msbuild TapoCSharp.Cli/TapoCSharp.Cli.csproj -t:Install -p:Configuration=Release
 ```
 
 #### CLI Usage
