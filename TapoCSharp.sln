@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TapoCSharp", "TapoCSharp\Ta
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TapoCSharp.Example", "TapoCSharp.Example\TapoCSharp.Example.csproj", "{240D5F91-D97E-48F0-807E-1883C51CEEEE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TapoCSharp.Cli", "TapoCSharp.Cli\TapoCSharp.Cli.csproj", "{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{240D5F91-D97E-48F0-807E-1883C51CEEEE}.Release|x64.Build.0 = Release|Any CPU
 		{240D5F91-D97E-48F0-807E-1883C51CEEEE}.Release|x86.ActiveCfg = Release|Any CPU
 		{240D5F91-D97E-48F0-807E-1883C51CEEEE}.Release|x86.Build.0 = Release|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Debug|x64.Build.0 = Debug|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Debug|x86.Build.0 = Debug|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Release|x64.ActiveCfg = Release|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Release|x64.Build.0 = Release|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Release|x86.ActiveCfg = Release|Any CPU
+		{B53B36FB-0E36-467A-9FCB-64F60B32F5E6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

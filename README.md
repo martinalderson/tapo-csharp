@@ -1,31 +1,66 @@
 # TapoCSharp
 
-A C# library for controlling TP-Link Tapo smart devices, specifically P100 smart plugs. This library implements both KLAP and Passthrough protocols for device communication.
+A C# library and CLI tool for controlling TP-Link Tapo smart devices, specifically P100 smart plugs. This library implements both KLAP and Passthrough protocols for device communication.
 
-## Features
+## 🚀 Quick Start
 
-- **KLAP Protocol Support**: Modern encrypted communication protocol
-- **Passthrough Protocol Support**: Legacy RSA-based protocol for older devices
-- **Automatic Protocol Detection**: Detects which protocol the device supports
-- **Device Control**: Turn devices on/off, get device information
-- **Secure Authentication**: Proper encryption and authentication handling
+### CLI Tool (Recommended)
 
-## Usage
+The easiest way to use TapoCSharp is with the CLI tool. Download the pre-built binary for your platform:
 
-### Environment Variables
+- **Linux x64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-linux-x64)
+- **Linux ARM64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-linux-arm64)
+- **macOS x64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-osx-x64)
+- **macOS ARM64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-osx-arm64)
+- **Windows x64**: [Download](https://github.com/martinalderson/tapo-csharp/releases/latest/download/tapo-win-x64.exe)
 
-Set the following environment variables:
+#### Installation
 
 ```bash
-export TAPO_USERNAME="your_tapo_username"
-export TAPO_PASSWORD="your_tapo_password" 
-export IP_ADDRESS="192.168.0.xxx"
+# Linux/macOS - Copy to a directory in your PATH
+sudo cp tapo /usr/local/bin/
+chmod +x /usr/local/bin/tapo
+
+# Or for user installation:
+cp tapo ~/.local/bin/
+chmod +x ~/.local/bin/tapo
 ```
 
-### Example
+#### CLI Usage
 
 ```bash
-dotnet run --project TapoCSharp.Example
+# Configure authentication (first time setup)
+tapo auth
+
+# Add a device
+tapo devices add 192.168.1.100 --name "Living Room Lamp"
+
+# List all devices
+tapo devices ls
+
+# Control devices
+tapo on "Living Room Lamp"
+tapo off 192.168.1.100
+tapo status "Living Room Lamp"
+
+# Remove a device
+tapo devices rm "Living Room Lamp"
+```
+
+### CLI Features
+
+- 🎨 **Beautiful TUI**: Rich terminal interface with colors, tables, and spinners
+- 🔧 **Device Management**: Add, remove, and list your devices
+- ⚡ **Instant Control**: Turn devices on/off with simple commands
+- 📊 **Device Status**: View detailed device information and status
+- 🔐 **Secure Storage**: Credentials stored securely in `~/.tapo/`
+
+## 📚 Library Usage
+
+### Installation
+
+```bash
+dotnet add package TapoCSharp
 ```
 
 ### Code Example
@@ -34,45 +69,93 @@ dotnet run --project TapoCSharp.Example
 using TapoCSharp;
 
 var client = new ApiClient("username", "password");
-var device = await client.P100Async("192.168.0.100");
+var device = await client.P100Async("192.168.1.100");
 
 // Get device information
 var deviceInfo = await device.GetDeviceInfoAsync();
-Console.WriteLine($"Device: {deviceInfo.Nickname}");
+Console.WriteLine($"Device: {deviceInfo["nickname"]}");
 
 // Control device
-await device.TurnOnAsync();
-await device.TurnOffAsync();
+await device.OnAsync();
+await device.OffAsync();
 ```
 
-## Architecture
+### Environment Variables Example
 
+```bash
+export TAPO_USERNAME="your_tapo_username"
+export TAPO_PASSWORD="your_tapo_password" 
+export IP_ADDRESS="192.168.1.100"
+
+dotnet run --project TapoCSharp.Example
+```
+
+## 🏗️ Architecture
+
+### Core Library
 - **ApiClient.cs** - Main entry point for the library
-- **P100PlugHandler.cs** - Device-specific control methods
+- **P100PlugHandler.cs** - Device-specific control methods  
 - **KlapProtocolHandler.cs** - KLAP protocol implementation
 - **PassthroughProtocolHandler.cs** - Legacy protocol support
 - **KlapCipher.cs** - Cryptographic utilities
 
-## Protocol Support
+### CLI Tool
+- **Commands/** - CLI command implementations
+- **Services/** - Configuration and device management
+- **Models/** - Data models for config and devices
+
+## 🔌 Protocol Support
 
 This library supports both communication protocols used by TP-Link Tapo devices:
 
-1. **KLAP Protocol** - Modern encrypted protocol using AES encryption
-2. **Passthrough Protocol** - Legacy protocol using RSA encryption
+1. **KLAP Protocol** - Modern encrypted protocol using AES encryption (P100 v1.2+)
+2. **Passthrough Protocol** - Legacy protocol using RSA encryption (older firmware)
 
 The library automatically detects which protocol your device supports and uses the appropriate implementation.
 
-## Dependencies
+## ✨ Features
+
+- **KLAP Protocol Support**: Modern encrypted communication protocol
+- **Passthrough Protocol Support**: Legacy RSA-based protocol for older devices
+- **Automatic Protocol Detection**: Detects which protocol the device supports
+- **Device Control**: Turn devices on/off, get device information
+- **Secure Authentication**: Proper encryption and authentication handling
+- **Cross-Platform CLI**: Beautiful terminal interface for all platforms
+- **Single-File Binaries**: Self-contained executables with no dependencies
+
+## 🛠️ Building from Source
+
+### Prerequisites
+- .NET 8.0 SDK or later
+
+### Build Library
+```bash
+git clone https://github.com/martinalderson/tapo-csharp.git
+cd tapo-csharp
+dotnet build
+```
+
+### Build CLI Tool
+```bash
+# Debug build
+dotnet run --project TapoCSharp.Cli -- --help
+
+# Release build (single-file binary)
+dotnet publish TapoCSharp.Cli -c Release --self-contained -p:PublishSingleFile=true -r linux-x64
+```
+
+## 🔧 Dependencies
 
 - .NET 8.0 or later
 - System.Text.Json for JSON handling
 - System.Security.Cryptography for encryption operations
+- Spectre.Console for CLI interface (CLI tool only)
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 This implementation is based on the excellent Rust [tapo](https://github.com/mihai-dinculescu/tapo) library by Mihai Dinculescu. The protocol details and cryptographic implementations are derived from that work.
 
-## Disclaimer
+## ⚠️ Disclaimer
 
 **USE AT YOUR OWN RISK**
 
@@ -80,6 +163,6 @@ This software is provided "as is", without warranty of any kind, express or impl
 
 This is an unofficial implementation and is not affiliated with or endorsed by TP-Link Technologies Co., Ltd. Use of this software may void your device warranty.
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
