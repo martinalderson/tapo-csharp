@@ -18,39 +18,138 @@ public class StatusCommand : AsyncCommand<DeviceCommandSettings>
             var configService = new ConfigService();
             var deviceService = new DeviceService(configService);
 
-            JsonNode? deviceInfo = null;
-            await AnsiConsole.Status()
-                .Spinner(Spinner.Known.Dots)
-                .StartAsync($"Getting status for {settings.Device}...", async ctx =>
-                {
-                    var device = await deviceService.ConnectToDeviceAsync(settings.Device);
-                    if (device != null)
-                        deviceInfo = await device.GetDeviceInfoAsync();
-                });
-
-            if (deviceInfo == null)
+            if (string.IsNullOrEmpty(settings.Device))
             {
-                AnsiConsole.MarkupLine("[red]✗ Failed to retrieve device information[/]");
-                return 1;
+                // Show status for all devices
+                return await ShowAllDevicesStatusAsync(deviceService);
             }
-
-            // Create a panel with device information
-            var nickname = deviceInfo["nickname"]?.ToString() ?? "Device";
-            var deviceOn = deviceInfo["device_on"]?.GetValue<bool>() ?? false;
-            
-            var panel = new Panel(CreateDeviceInfoTable(deviceInfo))
-                .Header($" {nickname} ")
-                .Border(BoxBorder.Rounded)
-                .BorderColor(deviceOn ? Color.Green : Color.Red);
-
-            AnsiConsole.Write(panel);
-            return 0;
+            else
+            {
+                // Show status for single device
+                return await ShowSingleDeviceStatusAsync(deviceService, settings.Device);
+            }
         }
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]✗ Error: {ex.Message}[/]");
             return 1;
         }
+    }
+
+    private async Task<int> ShowSingleDeviceStatusAsync(DeviceService deviceService, string deviceName)
+    {
+        JsonNode? deviceInfo = null;
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .StartAsync($"Getting status for {deviceName}...", async ctx =>
+            {
+                var device = await deviceService.ConnectToDeviceAsync(deviceName);
+                if (device != null)
+                    deviceInfo = await device.GetDeviceInfoAsync();
+            });
+
+        if (deviceInfo == null)
+        {
+            AnsiConsole.MarkupLine("[red]✗ Failed to retrieve device information[/]");
+            return 1;
+        }
+
+        // Create a panel with device information
+        var nickname = deviceInfo["nickname"]?.ToString() ?? "Device";
+        var deviceOn = deviceInfo["device_on"]?.GetValue<bool>() ?? false;
+        
+        var panel = new Panel(CreateDeviceInfoTable(deviceInfo))
+            .Header($" {nickname} ")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(deviceOn ? Color.Green : Color.Red);
+
+        AnsiConsole.Write(panel);
+        return 0;
+    }
+
+    private async Task<int> ShowAllDevicesStatusAsync(DeviceService deviceService)
+    {
+        var devices = await deviceService.GetAllDevicesAsync();
+        
+        if (!devices.Any())
+        {
+            AnsiConsole.MarkupLine("[yellow]No devices configured. Run 'tapo auth' to set up devices.[/]");
+            return 1;
+        }
+
+        AnsiConsole.MarkupLine($"[blue]Getting status for {devices.Length} device(s)...[/]");
+        AnsiConsole.WriteLine();
+
+        var deviceStatuses = new List<(string name, JsonNode? info, Exception? error)>();
+        
+        await AnsiConsole.Progress()
+            .StartAsync(async ctx =>
+            {
+                var task = ctx.AddTask("Checking devices...", maxValue: devices.Length);
+                var semaphore = new SemaphoreSlim(3); // Limit concurrent connections
+                
+                var tasks = devices.Select(async deviceConfig =>
+                {
+                    await semaphore.WaitAsync();
+                    try
+                    {
+                        var device = await deviceService.ConnectToDeviceAsync(deviceConfig.Name);
+                        var info = device != null ? await device.GetDeviceInfoAsync() : null;
+                        lock (deviceStatuses)
+                        {
+                            deviceStatuses.Add((deviceConfig.Name, info, null));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        lock (deviceStatuses)
+                        {
+                            deviceStatuses.Add((deviceConfig.Name, null, ex));
+                        }
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                        task.Increment(1);
+                    }
+                });
+                
+                await Task.WhenAll(tasks);
+            });
+
+        // Sort by device name for consistent output
+        deviceStatuses.Sort((a, b) => string.Compare(a.name, b.name, StringComparison.OrdinalIgnoreCase));
+
+        // Create summary table
+        var summaryTable = new Table();
+        summaryTable.AddColumn("Device");
+        summaryTable.AddColumn("Status");
+        summaryTable.AddColumn("Model");
+        summaryTable.AddColumn("IP Address");
+        
+        foreach (var (name, info, error) in deviceStatuses)
+        {
+            if (error != null)
+            {
+                summaryTable.AddRow(name, "[red]Offline[/]", "[dim]Error[/]", "[dim]N/A[/]");
+            }
+            else if (info != null)
+            {
+                var deviceOn = info["device_on"]?.GetValue<bool>() ?? false;
+                var status = deviceOn ? "[green]On[/]" : "[yellow]Off[/]";
+                var model = info["model"]?.ToString() ?? "Unknown";
+                var ip = info["ip"]?.ToString() ?? "Unknown";
+                
+                summaryTable.AddRow(name, status, model, ip);
+            }
+            else
+            {
+                summaryTable.AddRow(name, "[red]Failed[/]", "[dim]N/A[/]", "[dim]N/A[/]");
+            }
+        }
+
+        AnsiConsole.Write(summaryTable);
+        return 0;
     }
 
     private static Table CreateDeviceInfoTable(JsonNode deviceInfo)

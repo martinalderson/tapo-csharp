@@ -29,21 +29,22 @@ chmod +x ~/.local/bin/tapo
 #### CLI Usage
 
 ```bash
-# Configure authentication (first time setup)
+# Configure authentication and discover devices (first time setup)
 tapo auth
 
-# Add a device
-tapo devices add 192.168.1.100 --name "Living Room Lamp"
+# Show status of all devices
+tapo status
 
-# List all devices
-tapo devices ls
+# Show detailed status of specific device  
+tapo status "Living Room Lamp"
 
 # Control devices
 tapo on "Living Room Lamp"
 tapo off 192.168.1.100
-tapo status "Living Room Lamp"
 
-# Remove a device
+# Manage devices manually
+tapo devices add 192.168.1.100 --name "Living Room Lamp"
+tapo devices ls
 tapo devices rm "Living Room Lamp"
 ```
 
@@ -140,8 +141,16 @@ dotnet build
 # Debug build
 dotnet run --project TapoCSharp.Cli -- --help
 
-# Release build (single-file binary)
+# Build all platforms at once
+dotnet msbuild TapoCSharp.Cli/TapoCSharp.Cli.csproj -t:PublishAll -p:Configuration=Release
+
+# Install on Linux (builds and installs to ~/.local/bin/tapo)
+dotnet msbuild TapoCSharp.Cli/TapoCSharp.Cli.csproj -t:Install -p:Configuration=Release
+
+# Manual single platform builds
 dotnet publish TapoCSharp.Cli -c Release --self-contained -p:PublishSingleFile=true -r linux-x64
+dotnet publish TapoCSharp.Cli -c Release --self-contained -p:PublishSingleFile=true -r win-x64
+dotnet publish TapoCSharp.Cli -c Release --self-contained -p:PublishSingleFile=true -r osx-x64
 ```
 
 ## 🔧 Dependencies

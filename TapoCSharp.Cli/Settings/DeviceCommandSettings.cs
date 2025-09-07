@@ -5,9 +5,9 @@ namespace TapoCSharp.Cli.Settings;
 
 public class DeviceCommandSettings : CommandSettings
 {
-    [CommandArgument(0, "<device>")]
-    [Description("Device IP address or name")]
-    public required string Device { get; init; }
+    [CommandArgument(0, "[device]")]
+    [Description("Device IP address or name (omit for all devices)")]
+    public string? Device { get; init; }
 }
 
 public class AddDeviceSettings : CommandSettings
