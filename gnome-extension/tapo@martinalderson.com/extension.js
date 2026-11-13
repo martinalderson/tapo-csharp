@@ -39,6 +39,11 @@ class TapoToggle extends QuickSettings.QuickMenuToggle {
         });
 
         this._bin = extension.tapoBin;
+        // Guards async subprocess results: if the toggle is destroyed while a
+        // `tapo …` call is in flight, the cancellable aborts it and `_destroyed`
+        // stops any post-await code touching freed actors (use-after-free).
+        this._destroyed = false;
+        this._cancellable = new Gio.Cancellable();
 
         this.menu.setHeader(extension.tapoIcon, 'Tapo Plugs');
 
@@ -59,13 +64,19 @@ class TapoToggle extends QuickSettings.QuickMenuToggle {
         this._refresh();
     }
 
+    // True for a cancelled-after-destroy error, which we silently ignore.
+    _isCancelled(e) {
+        return this._destroyed ||
+            (e?.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED) ?? false);
+    }
+
     async _run(args) {
         if (!this._bin)
             throw new Error('tapo binary not found (PATH or ~/.local/bin)');
         const proc = Gio.Subprocess.new(
             [this._bin, ...args, '--json'],
             Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-        const [stdout, stderr] = await proc.communicate_utf8_async(null, null);
+        const [stdout, stderr] = await proc.communicate_utf8_async(null, this._cancellable);
         if (!proc.get_successful())
             throw new Error((stderr || '').trim() || `tapo ${args[0]} failed`);
         return (stdout && stdout.trim()) ? JSON.parse(stdout) : null;
@@ -74,8 +85,12 @@ class TapoToggle extends QuickSettings.QuickMenuToggle {
     async _refresh() {
         try {
             const devices = await this._run(['status']);
+            if (this._destroyed)
+                return;
             this._populate(devices ?? []);
         } catch (e) {
+            if (this._isCancelled(e))
+                return;
             this._showMessage(e.message);
         }
     }
@@ -132,6 +147,8 @@ class TapoToggle extends QuickSettings.QuickMenuToggle {
         try {
             await this._run(['toggle', deviceId]);
         } catch (e) {
+            if (this._isCancelled(e))
+                return;
             Main.notifyError('Tapo', e.message);
         }
     }
@@ -141,6 +158,8 @@ class TapoToggle extends QuickSettings.QuickMenuToggle {
         try {
             await this._run(['all', this.checked ? 'on' : 'off']);
         } catch (e) {
+            if (this._isCancelled(e))
+                return;
             Main.notifyError('Tapo', e.message);
         }
     }
@@ -149,10 +168,21 @@ class TapoToggle extends QuickSettings.QuickMenuToggle {
         this.subtitle = 'Scanning…';
         try {
             await this._run(['discover']);
+            if (this._destroyed)
+                return;
             await this._refresh();
         } catch (e) {
+            if (this._isCancelled(e))
+                return;
             this._showMessage(e.message);
         }
+    }
+
+    destroy() {
+        this._destroyed = true;
+        this._cancellable?.cancel();
+        this._cancellable = null;
+        super.destroy();
     }
 });
 
